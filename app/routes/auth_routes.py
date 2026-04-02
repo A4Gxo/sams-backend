@@ -11,16 +11,29 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/login")
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
+    
+    print(f"--- NEW LOGIN ATTEMPT: '{credentials.email}' ---") # <--- ADD THIS
+    
     # 1. Look up user by username
     db_user = db.query(models.User).filter(
         models.User.username == credentials.email
     ).first()
+
+    # --- ADD THIS ENTIRE DIAGNOSTIC BLOCK ---
+    if not db_user:
+        print("DIAGNOSTIC: User literally not found in the database.")
+    else:
+        print(f"DIAGNOSTIC: Found user! Their role is '{db_user.role}'")
+        print(f"DIAGNOSTIC: The exact DB password is: '{db_user.password_hash}'")
+        print(f"DIAGNOSTIC: The typed password is: '{credentials.password}'")
+    # ----------------------------------------
 
     if not db_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Invalid email or password"
         )
+    # ... (rest of your code stays the same) ...
 
     # 2. Check Password (With Smart On-The-Fly Migration)
     # Check if the database has an unhashed, plain-text password (hashes start with '$')
