@@ -4,13 +4,10 @@ from app.database import get_db
 from app.models.user import User 
 from app.schemas.user import UserCreate, UserResponse, UserLogin 
 from app.models.profiles import Student 
-# keep the imports but we will bypass them for now
 from app.utils.auth import verify_password, create_access_token, hash_password 
 from app import models
-router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-# Make sure you have your models imported at the top of the file!
-# import app.models as models  <-- Ensure this is there
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/login")
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
@@ -25,12 +22,27 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid email or password"
         )
 
-    # 2. Check Password (Testing Mode: Plain Text)
-    if credentials.password != db_user.password_hash:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Invalid email or password"
-        )
+    # 2. Check Password (With Smart On-The-Fly Migration)
+    # Check if the database has an unhashed, plain-text password (hashes start with '$')
+    if not db_user.password_hash.startswith("$"):
+        # If it's plain text, check if it matches what the user typed exactly
+        if credentials.password == db_user.password_hash:
+            # It matches! Now, instantly upgrade it to a secure hash for the future
+            db_user.password_hash = hash_password(credentials.password) 
+            db.commit() # Save the fixed hash to the database!
+            db.refresh(db_user)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Invalid email or password"
+            )
+    else:
+        # The normal, secure verification for users who already have hashed passwords
+        if not verify_password(credentials.password, db_user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Invalid email or password"
+            )
 
     # --- 🚨 THE CRITICAL GATEKEEPER FIX 🚨 ---
     # This blocks Guest/External users until you click 'Approve' in the dashboard
@@ -76,6 +88,7 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
         "faculty_id": faculty_id_val,
         "full_name": full_name
     }
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     
@@ -91,17 +104,17 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         # 2. Create the Base User
         new_user = User(
             username=user.username,
-            password_hash=user.password, # TODO: Add hash_password() back later
+            # ✨ FIXED: New users will now be securely hashed immediately!
+            password_hash=hash_password(user.password), 
             role=user.role.lower(),
             is_approved=False,
-            # Make sure your User DB model actually has this column!
             institution=getattr(user, 'institution', None) 
         )
 
         db.add(new_user)
         
-        # FLUSH is the secret weapon here. It sends the data to the DB to generate 
-        # the new_user.user_id, but DOES NOT save it permanently yet.
+        # FLUSH sends the data to the DB to generate the new_user.user_id, 
+        # but DOES NOT save it permanently yet.
         db.flush() 
 
         # 3. Create Specific Profiles based on Role
@@ -127,16 +140,14 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
             pass
 
         # 4. Commit EVERYTHING together
-        # If anything above failed, this line never runs, and nothing is saved.
         db.commit() 
         db.refresh(new_user)
 
         return new_user
 
     except Exception as e:
-        # If ANYTHING goes wrong (like a duplicate roll_no), undo all database changes
         db.rollback() 
-        print(f"Registration Error: {e}") # Prints the exact crash reason to your terminal
+        print(f"Registration Error: {e}") 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Registration failed: {str(e)}"
