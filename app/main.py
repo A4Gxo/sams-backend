@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app import models
-from app.database import get_db ,engine
+from app.database import get_db ,engine ,Base
 # Make sure faculty_routes is imported in your routes __init__.py or here
 from app.routes import (
     student_routes, 
@@ -15,7 +15,7 @@ from app.routes import (
     admin_routes,
     faculty_routes # <-- Ensure this is imported
 )
-models.Base.metadata.create_all(bind=engine)  # This creates tables based on your models
+Base.metadata.create_all(bind=engine)  # This creates tables based on your models
 
 
 app = FastAPI(title="Student Attendance Management System API")
