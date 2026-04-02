@@ -19,7 +19,7 @@ from app.routes import (
 app = FastAPI(title="Student Attendance Management System API")
 
 # --- CORS Configuration ---
-origins = ["https://sams-frontend-18w7a9439-a4gxos-projects.vercel.app",
+origins = ["https://sams-frontend-azure.vercel.app",
     "http://localhost:5173"]
 app.add_middleware(
     CORSMiddleware,
