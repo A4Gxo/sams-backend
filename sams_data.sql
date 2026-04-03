@@ -43,5 +43,27 @@ INSERT INTO public.students (student_id, user_id, roll_no, first_name, last_name
 (504, 8, 'EC-2026-09', 'Priya', 'Dash', 1, 3),
 (2, 13, 'EXT-13', 'External', 'Guest', NULL, 1);
 
+INSERT INTO public.courses (course_id, course_code, course_name, faculty_id, department_id) VALUES
+(10, 'CS101', 'Machine Learning', 101, 1),
+(30, 'EC301', 'Microprocessors', 103, 3),
+(40, 'CS102', 'Data Structures', 101, 1),
+(50, 'IT203', 'Web Development', 102, 2),
+(20, 'IT202', 'Database Systems', 2, 2);
+
+-- 7. Insert Enrollments (Putting students into the courses!)
+INSERT INTO public.enrollments (enrollment_id, student_id, course_id, enrollment_date) VALUES
+(1, 501, 10, '2026-01-01'),
+(2, 501, 40, '2026-01-01'),
+(3, 502, 20, '2026-01-01'),
+(4, 502, 50, '2026-01-01'),
+(5, 503, 10, '2026-01-01'),
+(6, 503, 40, '2026-01-01'),
+(7, 504, 30, '2026-01-01'),
+(8, 505, 10, '2026-01-01'),
+(9, 501, 20, '2026-03-31'),
+(10, 501, 30, '2026-04-01');
+
 -- 5. Fix Sequence Counters so new users don't cause ID crashes
 SELECT pg_catalog.setval('public.users_user_id_seq', 14, true);
+SELECT pg_catalog.setval('public.courses_course_id_seq', 60, true);
+SELECT pg_catalog.setval('public.enrollments_enrollment_id_seq', 11, true);
