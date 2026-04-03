@@ -6,6 +6,7 @@ from app.schemas.user import UserCreate, UserResponse, UserLogin
 from app.models.profiles import Student 
 from app.utils.auth import verify_password, create_access_token, hash_password 
 from app import models
+import os 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -165,3 +166,24 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Registration failed: {str(e)}"
         )
+
+
+@router.get("/inject-data")
+def inject_database_data(db: Session = Depends(get_db)):
+    try:
+        # This looks for the sams_data.sql file in your main backend folder
+        # You may need to adjust the "../" depending on exactly where you put the file!
+        file_path = os.path.join(os.path.dirname(__file__), "C:\Users\Gyanaranjan Moharana\OneDrive\Documents\sams_data.sql")
+        
+        with open(file_path, 'r') as file:
+            sql_script = file.read()
+            
+        # Tell the live Render server to execute it inside Neon
+        db.execute(text(sql_script))
+        db.commit()
+        
+        return {"message": "DATA SUCCESSFULLY INJECTED FROM THE CLOUD! THE FIREWALL IS BYPASSED."}
+        
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e), "hint": "Check if sams_data.sql is in the correct folder!"}
