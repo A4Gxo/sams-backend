@@ -159,7 +159,7 @@ def inject_database_data(db: Session = Depends(get_db)):
     try:
         # ✨ FIXED: This uses a Relative Path that works on Render! 
         # It goes up two folders (from routes -> app -> backend root) to find the file.
-        file_path = os.path.join(os.path.dirname(__file__), r"C:\Users\Gyanaranjan Moharana\sams\backend\sams_data.sql")
+        file_path = os.path.join(os.path.dirname(__file__), "../../sams_data.sql")
         
         # Safety Check: Did the file actually make it to Render?
         if not os.path.exists(file_path):
